@@ -1,7 +1,7 @@
 {
   "required_api_version": "^2.0.0",
-  "name": "Streamlink Twitch ULauncher",
-  "description": "Easily launch Twitch streams via Streamlink",
+  "name": "Streamlink Twitch",
+  "description": "Easily open Twitch streams with Streamlink",
   "developer_name": "pixelat3d",
   "icon": "images/icon.png",
   "options": {
@@ -11,7 +11,7 @@
     {
       "id": "twitch_keyword",
       "type": "keyword",
-      "name": "Twitch",
+      "name": "Watch on Twitch",
       "default_value": "tw"
     },
     {
@@ -33,7 +33,7 @@
       "type": "select",
       "name": "Video Quality",
       "description": "Select video quality",
-      "options": ["best", "worst", "720p60", "1080p60", "480p", "360p", "audio_only"],
+      "options": ["best", "1080p60", "720p60", "480p", "360p", "worst", "audio_only"],
       "default_value": "best"
     }
   ]
