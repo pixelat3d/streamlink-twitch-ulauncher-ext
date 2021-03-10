@@ -85,11 +85,11 @@ class ItemEnterEventListener(EventListener):
 
             if "opening stream:" in line:
                 if skip_ads == 'yes':
-                    notification_title = ""
-                    notification_message = "%s's Stream is loading. If there's preroll ads, it won't show up for a good 30 seconds. You can toggle this option in settings."%stream
+                    notification_title = "Grab Some Popcorn!"
+                    notification_message = "%s's Stream is loading. Hang tight while we wait for the preroll ads to finish."%stream
                 else:
-                    notification_title = ''
-                    notification_message = "%s's Stream is loading. Please wait..."%stream
+                    notification_title = 'Grab Some Popcorn!'
+                    notification_message = "%s's Stream is loading."%stream
                 break
 
             if len(buff) > 10:
