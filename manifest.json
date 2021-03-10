@@ -15,26 +15,43 @@
       "default_value": "tw"
     },
     {
-      "id": "streamlink_path",
-      "type": "input",
-      "name": "Streamlink Path",
-      "description": "Path to streamlink binary",
-      "default_value": "streamlink"
-    },
-    {
       "id": "video_player",
-      "type": "text",
+      "type": "select",
       "name": "Player",
-      "description": "Video Player to Launch",
+      "description": "Video Player to use. | Default: mpv",
+      "options": ["mpv","vlc","mplayer","mpc-hc","potplayer"],
       "default_value": "mpv"
     },
     {
       "id": "stream_quality",
       "type": "select",
       "name": "Video Quality",
-      "description": "Select video quality",
-      "options": ["best", "1080p60", "720p60", "480p", "360p", "worst", "audio_only"],
-      "default_value": "best"
-    }
+      "description": "Select video quality. | Default: Best",
+      "options": ["Best", "1080p60", "720p60", "480p", "360p", "Worst", "Audio Only"],
+      "default_value": "Best"
+    },
+    {
+      "id": "disable_notifications",
+      "type": "select",
+      "name": "Disable Notifications",
+      "description": "Turn off feedback notifications when launching streams | Default: No",
+      "options": ["Yes", "No"],
+      "default_value": "No"
+    },
+    {
+      "id": "disable_ads",
+      "type": "select",
+      "name": "Skip preroll ads",
+      "description": "Attempt to skip preroll ads. This really just means you won't see video for about 30 seconds. | Default: No",
+      "options": ["Yes", "No"],
+      "default_value": "No"
+    },
+    {
+      "id": "streamlink_path",
+      "type": "input",
+      "name": "Streamlink Path",
+      "description": "Path to streamlink binary if it's not in your $PATH | Default:",
+      "default_value": ""
+    }    
   ]
 }
