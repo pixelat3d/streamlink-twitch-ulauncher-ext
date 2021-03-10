@@ -13,7 +13,7 @@
       "type": "keyword",
       "name": "Watch on Twitch",
       "default_value": "tw"
-    },
+    },    
     {
       "id": "video_player",
       "type": "select",
@@ -29,6 +29,13 @@
       "description": "Select video quality. | Default: Best",
       "options": ["Best", "1080p60", "720p60", "480p", "360p", "Worst", "Audio Only"],
       "default_value": "Best"
+    },
+    {
+      "id": "autocomplete",
+      "type": "text",
+      "name": "Favorite Streamers",
+      "description": "Comma seperated list of streamers to match against so you can type even less! | Default: ",
+      "default_value": ""
     },
     {
       "id": "disable_notifications",
@@ -52,6 +59,6 @@
       "name": "Streamlink Path",
       "description": "Path to streamlink binary if it's not in your $PATH | Default:",
       "default_value": ""
-    }    
+    }
   ]
 }

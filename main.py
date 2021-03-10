@@ -1,6 +1,5 @@
 import os 
 import subprocess
-
 from gi.repository import Notify
 
 from ulauncher.api.client.Extension import Extension
@@ -21,7 +20,21 @@ class KeywordQueryEventListener(EventListener):
     # Event handler for input query changes
     def on_event(self, event, extension):
         items = []
-        stream = event.get_argument()
+        autocomplete = []
+        autocomplete = extension.preferences.get("autocomplete").lower()
+        autocomplete = autocomplete.split(',')
+        stream = event.get_argument().lower()
+
+        if len(stream) > 2:
+            for streamer in autocomplete:
+                if stream in streamer:
+                    items.append(ExtensionResultItem(
+                                icon='images/icon.png',
+                                name="Watch %s"%streamer,
+                                description="Watch %s on Twitch"%streamer.strip(" "),
+                                on_enter=ExtensionCustomAction(streamer.strip(" "))
+                            )
+                    )
 
         items.append(ExtensionResultItem(
                     icon='images/icon.png',
@@ -30,7 +43,7 @@ class KeywordQueryEventListener(EventListener):
                     on_enter=ExtensionCustomAction(stream)
                 )
         )
-    
+
         return RenderResultListAction(items)
 
 class ItemEnterEventListener(EventListener):
