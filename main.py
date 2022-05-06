@@ -1,5 +1,8 @@
 import os 
 import subprocess
+import gi
+import time
+gi.require_version('Notify', '0.7')
 from gi.repository import Notify
 
 from ulauncher.api.client.Extension import Extension
@@ -23,7 +26,12 @@ class KeywordQueryEventListener(EventListener):
         autocomplete = []
         autocomplete = extension.preferences.get("autocomplete").lower()
         autocomplete = autocomplete.split(',')
-        stream = event.get_argument().lower()
+        stream = event.get_argument()
+
+        if stream:
+            stream = stream.lower()
+        else:
+            stream = ""
 
         if len(stream) > 2:
             for streamer in autocomplete:
@@ -36,6 +44,16 @@ class KeywordQueryEventListener(EventListener):
                             )
                     )
 
+        if stream == "!!":
+            items.append(ExtensionResultItem(
+                        icon='images/icon.png',
+                        name="Watch Everything",
+                        description="Loads all favorites at once",
+                        on_enter=ExtensionCustomAction(stream)
+                    )
+            )
+
+
         items.append(ExtensionResultItem(
                     icon='images/icon.png',
                     name="Watch %s"%stream,
@@ -47,8 +65,8 @@ class KeywordQueryEventListener(EventListener):
         return RenderResultListAction(items)
 
 class ItemEnterEventListener(EventListener):
-    # When we slap enter on an item
-    def on_event(self, event, extension):
+    # Load stream accoridng to preferences
+    def load_stream(self, stream, extension):
         Notify.init("Streamlink Twitch")
         streamlink_path = extension.preferences.get("streamlink_path")
         quality = extension.preferences.get("stream_quality").lower()
@@ -56,7 +74,6 @@ class ItemEnterEventListener(EventListener):
         skip_ads = extension.preferences.get("disable_ads").lower()
         no_notify = extension.preferences.get("disable_notifications").lower()
         icon_path = os.path.dirname(os.path.realpath(__file__))+"/images/icon.png"
-        stream = event.get_data() or ""
 
         # If left blank, let's hope it's somewhere in their $PATH
         if not streamlink_path:
@@ -73,7 +90,7 @@ class ItemEnterEventListener(EventListener):
             url = stream
 
         if skip_ads == "yes":
-            cmd = [streamlink_path, "--twitch-disable-ads", "--player=%s"%player, url, quality]
+            cmd = [streamlink_path, "--twitch-disable-ads", "--twitch-disable-hosting", "--twitch-disable-reruns", "--player=%s"%player, url, quality]
         else:
             cmd = [streamlink_path, "--player=%s"%player, url, quality]
 
@@ -115,8 +132,21 @@ class ItemEnterEventListener(EventListener):
 
         Notify.uninit()
 
-        return RenderResultListAction([])
 
+    # When we slap enter on an item
+    def on_event(self, event, extension):
+        stream = event.get_data() or ""
+
+        if stream == '!!':
+            autocomplete = extension.preferences.get("autocomplete").lower()
+            autocomplete = autocomplete.split(',')
+            for fav in autocomplete:
+                self.load_stream(fav, extension)
+                time.sleep(1)
+        else:
+            self.load_stream(stream, extension)
+
+        return RenderResultListAction([])
 
 if __name__ == '__main__':
     StreamlinkTwitchExtension().run()
