@@ -66,7 +66,7 @@ class KeywordQueryEventListener(EventListener):
 
 class ItemEnterEventListener(EventListener):
     # Load stream accoridng to preferences
-    def load_stream(self, stream, extension):
+    def load_stream(self, stream, extension, special):
         Notify.init("Streamlink Twitch")
         streamlink_path = extension.preferences.get("streamlink_path")
         quality = extension.preferences.get("stream_quality").lower()
@@ -128,7 +128,11 @@ class ItemEnterEventListener(EventListener):
                 break
 
         if not no_notify == 'yes':
-            Notify.Notification.new(notification_title, notification_message, icon_path).show()
+            if not special:
+                Notify.Notification.new(notification_title, notification_message, icon_path).show()
+            else:
+                if "is loading" in notification_message:
+                    Notify.Notification.new(notification_title, notification_message, icon_path).show()
 
         Notify.uninit()
 
@@ -140,11 +144,18 @@ class ItemEnterEventListener(EventListener):
         if stream == '!!':
             autocomplete = extension.preferences.get("autocomplete").lower()
             autocomplete = autocomplete.split(',')
+
+            Notify.init("Streamlink Twitch")
+            icon_path = os.path.dirname(os.path.realpath(__file__))+"/images/icon.png"
+            notification_title = "Grab some Popcorn!"
+            notification_message =  "Loading all of your favorites. Streams will pop up if they are online. This may take a while..."
+            Notify.Notification.new(notification_title, notification_message, icon_path).show()
+            Notify.uninit()
             for fav in autocomplete:
-                self.load_stream(fav, extension)
+                self.load_stream(fav, extension, True)
                 time.sleep(1)
         else:
-            self.load_stream(stream, extension)
+            self.load_stream(stream, extension, False)
 
         return RenderResultListAction([])
 
