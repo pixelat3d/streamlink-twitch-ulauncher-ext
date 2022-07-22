@@ -89,10 +89,19 @@ class ItemEnterEventListener(EventListener):
         else:
             url = stream
 
+        player_unique_args = []
+        if "celluloid" in player:
+            player = '%s --no-existing-session'%player
+            player_unique_args.append("-n")
+
         if skip_ads == "yes":
             cmd = [streamlink_path, "--twitch-disable-ads", "--twitch-disable-hosting", "--twitch-disable-reruns", "--player=%s"%player, url, quality]
         else:
             cmd = [streamlink_path, "--player=%s"%player, url, quality]
+
+        if player_unique_args:
+            for arg in player_unique_args:
+                cmd.append(arg)
 
         buff = []
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, encoding='utf-8', )
