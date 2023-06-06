@@ -95,9 +95,9 @@ class ItemEnterEventListener(EventListener):
             player_unique_args.append("-n")
 
         if skip_ads == "yes":
-            cmd = [streamlink_path, "--twitch-disable-ads", "--twitch-disable-hosting", "--twitch-disable-reruns", "--player=%s"%player, url, quality]
+            cmd = [streamlink_path, "--twitch-api-header Client-ID=ue6666qo983tsx6so1t0vnawi233wa", "--twitch-disable-ads", "--twitch-disable-hosting", "--twitch-disable-reruns", "--player=%s"%player, url, quality]
         else:
-            cmd = [streamlink_path, "--player=%s"%player, url, quality]
+            cmd = [streamlink_path, "--twitch-api-header Client-ID=ue6666qo983tsx6so1t0vnawi233wa", "--player=%s"%player, url, quality]
 
         if player_unique_args:
             for arg in player_unique_args:
