@@ -74,6 +74,9 @@ class ItemEnterEventListener(EventListener):
         skip_ads = extension.preferences.get("disable_ads").lower()
         no_notify = extension.preferences.get("disable_notifications").lower()
         icon_path = os.path.dirname(os.path.realpath(__file__))+"/images/icon.png"
+        notification_title = "Whoops!"
+        notification_message = "Something probably went wrong"        
+        cid = "ue6666qo983tsx6so1t0vnawi233wa"
 
         # If left blank, let's hope it's somewhere in their $PATH
         if not streamlink_path:
@@ -95,16 +98,22 @@ class ItemEnterEventListener(EventListener):
             player_unique_args.append("-n")
 
         if skip_ads == "yes":
-            cmd = [streamlink_path, "--twitch-api-header Client-ID=ue6666qo983tsx6so1t0vnawi233wa", "--twitch-disable-ads", "--twitch-disable-hosting", "--twitch-disable-reruns", "--player=%s"%player, url, quality]
+            cmd = [streamlink_path, "--twitch-disable-ads", "--twitch-disable-reruns", "--twitch-api-header Client-ID=%s"%cid, "--player=%s"%player]
         else:
-            cmd = [streamlink_path, "--twitch-api-header Client-ID=ue6666qo983tsx6so1t0vnawi233wa", "--player=%s"%player, url, quality]
+            cmd = [streamlink_path, "--twitch-api-header Client-ID=%s"%cid, "--player=%s"%player]
 
         if player_unique_args:
             for arg in player_unique_args:
                 cmd.append(arg)
 
+        cmd.append("%s %s"%(url,quality))
+
+        # Popen doesn't like cmd list eleemnts with spaces, so we break it down intos a string and
+        # add shell=True to the call to let it use that instead of the list
+        cmdStr = ' '.join(cmd)
+
         buff = []
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, encoding='utf-8', )
+        proc = subprocess.Popen(cmdStr, stdout=subprocess.PIPE, encoding='utf-8', shell=True)
 
         for line in iter(proc.stdout.readline,''):
             line = line.lower()
