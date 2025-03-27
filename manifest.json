@@ -59,6 +59,21 @@
       "name": "Streamlink Path",
       "description": "Path to streamlink binary if it's not in your $PATH | Default:",
       "default_value": ""
+    },
+    {
+      "id": "auth_token",
+      "type": "input",
+      "name": "Twitch Authorization Token",
+      "description": "Twitch Authorization Token | Default: ",
+      "default_value": ""
+    },
+    {
+      "id": "restrict_cores",
+      "type": "select",
+      "name": "Restrict CPU Cores",
+      "description": "Limit Streamlink to a single CPU Core (13th and 14th Gen Intel 'Fix') | Default: No",
+      "options": ["Yes", "No"],
+      "default_value": "No"
     }
   ]
 }

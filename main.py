@@ -44,7 +44,7 @@ class KeywordQueryEventListener(EventListener):
                             )
                     )
 
-        if stream == "!!":
+        if stream == "--":
             items.append(ExtensionResultItem(
                         icon='images/icon.png',
                         name="Watch Everything",
@@ -71,12 +71,15 @@ class ItemEnterEventListener(EventListener):
         streamlink_path = extension.preferences.get("streamlink_path")
         quality = extension.preferences.get("stream_quality").lower()
         player = extension.preferences.get("video_player")
+        taskset = extension.preferences.get("restrict_cores").lower()
+        auth_token = extension.preferences.get("auth_token")
         skip_ads = extension.preferences.get("disable_ads").lower()
         no_notify = extension.preferences.get("disable_notifications").lower()
         icon_path = os.path.dirname(os.path.realpath(__file__))+"/images/icon.png"
         notification_title = "Whoops!"
         notification_message = "Something probably went wrong"        
         cid = "ue6666qo983tsx6so1t0vnawi233wa"
+        cmd = []
 
         # If left blank, let's hope it's somewhere in their $PATH
         if not streamlink_path:
@@ -92,15 +95,27 @@ class ItemEnterEventListener(EventListener):
         else:
             url = stream
 
+        if taskset == "yes":
+            cmd.append("taskset -c 0")
+            cmd.append(streamlink_path)
+        else:
+            cmd.append(streamlink_path)
+
         player_unique_args = []
         if "celluloid" in player:
             player = '%s --no-existing-session'%player
             player_unique_args.append("-n")
 
         if skip_ads == "yes":
-            cmd = [streamlink_path, "--twitch-disable-ads", "--twitch-disable-reruns", "--twitch-api-header Client-ID=%s"%cid, "--player=%s"%player]
-        else:
-            cmd = [streamlink_path, "--twitch-api-header Client-ID=%s"%cid, "--player=%s"%player]
+            cmd.append("--twitch-disable-ads")
+
+        cmd.append("--twitch-disable-reruns")
+        cmd.append("--twitch-api-header Client-ID=%s"%cid)
+
+        if not auth_token == '':
+            cmd.append("--twitch-api-header=Authorization=OAuth=%s"%cid)
+
+        cmd.append("--player=%s"%player)
 
         if player_unique_args:
             for arg in player_unique_args:
@@ -159,7 +174,7 @@ class ItemEnterEventListener(EventListener):
     def on_event(self, event, extension):
         stream = event.get_data() or ""
 
-        if stream == '!!':
+        if stream == '--':
             autocomplete = extension.preferences.get("autocomplete").lower()
             autocomplete = autocomplete.split(',')
 
