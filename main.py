@@ -105,6 +105,8 @@ class ItemEnterEventListener(EventListener):
         if "celluloid" in player:
             player = '%s --no-existing-session'%player
             player_unique_args.append("-n")
+        else:
+            cmd.append('--title "{author} is Playing \'{game}\' | {title} | %s"'%url)
 
         if skip_ads == "yes":
             cmd.append("--twitch-disable-ads")
