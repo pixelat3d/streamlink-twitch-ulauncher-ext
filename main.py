@@ -77,8 +77,7 @@ class ItemEnterEventListener(EventListener):
         no_notify = extension.preferences.get("disable_notifications").lower()
         icon_path = os.path.dirname(os.path.realpath(__file__))+"/images/icon.png"
         notification_title = "Whoops!"
-        notification_message = "Something probably went wrong"        
-        cid = "ue6666qo983tsx6so1t0vnawi233wa"
+        notification_message = "Something probably went wrong"
         cmd = []
 
         # If left blank, let's hope it's somewhere in their $PATH
@@ -112,10 +111,9 @@ class ItemEnterEventListener(EventListener):
             cmd.append("--twitch-disable-ads")
 
         cmd.append("--twitch-disable-reruns")
-        cmd.append("--twitch-api-header Client-ID=%s"%cid)
 
         if not auth_token == '':
-            cmd.append("--twitch-api-header=Authorization=OAuth=%s"%cid)
+            cmd.append("--twitch-api-header=Authorization=OAuth=%s"%auth_token)
 
         cmd.append("--player=%s"%player)
 
