@@ -154,11 +154,14 @@ class ItemEnterEventListener(EventListener):
                     notification_title = 'Grab Some Popcorn!'
                     notification_message = "%s's Stream is loading."%stream
                 break
+                proc.kill()
 
             if len(buff) > 10:
                 notification_title = 'Yikes!'
                 notification_message = "Infinite loop proection kicked in."
                 break
+                proc.kill()
+
 
         if not no_notify == 'yes':
             if not special:
