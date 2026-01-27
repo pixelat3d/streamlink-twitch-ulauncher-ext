@@ -103,21 +103,27 @@ class ItemEnterEventListener(EventListener):
         player_unique_args = []
         # We assume people are just going to use flathub for these. They can use
         # custom player input otherwise...
-        cmpStr = player.lower();
-        if 'flatpak' in cmpStr:
+        cmp_player = player.lower();
+        if 'flatpak' in cmp_player:
             player = 'flatpak'
-            if 'mpv' in cmpStr:
+            if 'mpv' in cmp_player:
                 cmd.append( '--player-args"run io.mpv.Mpv"' )
-            if 'celluloid' in cmpStr:
+            if 'celluloid' in cmp_player:
                 cmd.append( '--player-args="run io.github.celluloid_player.Celluloid --no-existing-session"' )
                 cmd.append( '--player-continuous-http' )
-            if 'vlc' in cmpStr:
+            if 'vlc' in cmp_player:
                 cmd.append( '--player-args="run org.videolan.VLC"' )
+            if 'showtime' in cmp_player:
+                cmd.append( '--player-args="run org.gnome.Showtime --new-window"' )
+                player_unique_args.append('--player-passthrough=hls,http')
         else:
             player = player
 
-            if 'celluloid' in cmpStr:
+            if 'celluloid' in cmp_player:
                 player_unique_args.append( '--no-existing-session' )
+            if 'showtime' in cmp_player:
+                player = '%s --player-args="--new-window"'%player
+                player_unique_args.append('--player-passthrough=hls,http')
 
             cmd.append('--title "{author} is Playing \'{game}\' | {title} | %s"'%url)
 
