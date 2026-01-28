@@ -101,32 +101,11 @@ class ItemEnterEventListener(EventListener):
             cmd.append(streamlink_path)
 
         player_unique_args = []
-        # We assume people are just going to use flathub for these. They can use
-        # custom player input otherwise...
-        cmp_player = player.lower();
-        if 'flatpak' in cmp_player:
-            player = 'flatpak'
-            if 'mpv' in cmp_player:
-                cmd.append( '--player-args"run io.mpv.Mpv"' )
-            if 'celluloid' in cmp_player:
-                cmd.append( '--player-args="run io.github.celluloid_player.Celluloid --no-existing-session"' )
-                cmd.append( '--player-continuous-http' )
-            if 'vlc' in cmp_player:
-                cmd.append( '--player-args="run org.videolan.VLC"' )
-            if 'showtime' in cmp_player:
-                cmd.append( '--player-args="run org.gnome.Showtime --new-window"' )
-                player_unique_args.append('--player-passthrough=hls,http')
+        if "celluloid" in player:
+            player = '%s --no-existing-session'%player
+            player_unique_args.append("-n")
         else:
-            player = player
-
-            if 'celluloid' in cmp_player:
-                player_unique_args.append( '--no-existing-session' )
-            if 'showtime' in cmp_player:
-                player = '%s --player-args="--new-window"'%player
-                player_unique_args.append('--player-passthrough=hls,http')
-
             cmd.append('--title "{author} is Playing \'{game}\' | {title} | %s"'%url)
-
 
         if skip_ads == "yes":
             cmd.append("--twitch-disable-ads")
@@ -143,8 +122,6 @@ class ItemEnterEventListener(EventListener):
                 cmd.append(arg)
 
         cmd.append("%s %s"%(url,quality))
-
-        print( cmd )
 
         # Popen doesn't like cmd list eleemnts with spaces, so we break it down intos a string and
         # add shell=True to the call to let it use that instead of the list
