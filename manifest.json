@@ -19,7 +19,7 @@
       "type": "select",
       "name": "Player",
       "description": "Video Player to use. | Default: mpv",
-      "options": ["mpv","vlc","mplayer","mpc-hc","potplayer","celluloid","showtime","showtime-flatpak","celluloid-flatpak","mpv-flatpak","vlc-flatpak"],
+      "options": ["mpv","vlc","mplayer","mpc-hc","potplayer","celluloid"],
       "default_value": "mpv"
     },
     {
