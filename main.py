@@ -2,6 +2,7 @@ import os
 import subprocess
 import gi
 import time
+import asyncio
 gi.require_version('Notify', '0.7')
 from gi.repository import Notify
 
@@ -70,15 +71,17 @@ class ItemEnterEventListener(EventListener):
         Notify.init("Streamlink Twitch")
         streamlink_path = extension.preferences.get("streamlink_path")
         quality = extension.preferences.get("stream_quality").lower()
-        player = extension.preferences.get("video_player")
+        player = extension.preferences.get("video_player").lower()
         taskset = extension.preferences.get("restrict_cores").lower()
+        is_flatpak = extension.preferences.get("player_is_flatpak").lower()
         auth_token = extension.preferences.get("auth_token")
-        skip_ads = extension.preferences.get("disable_ads").lower()
         no_notify = extension.preferences.get("disable_notifications").lower()
         icon_path = os.path.dirname(os.path.realpath(__file__))+"/images/icon.png"
         notification_title = "Whoops!"
         notification_message = "Something probably went wrong"
         cmd = []
+        cmd_tail = []
+        player_args = []
 
         # If left blank, let's hope it's somewhere in their $PATH
         if not streamlink_path:
@@ -100,32 +103,57 @@ class ItemEnterEventListener(EventListener):
         else:
             cmd.append(streamlink_path)
 
-        player_unique_args = []
-        if "celluloid" in player:
-            player = '%s --no-existing-session'%player
-            player_unique_args.append("-n")
+        if is_flatpak == 'yes':
+            selected_player = player
+            player = 'flatpak'
+
+            match selected_player:
+                case 'vlc':
+                    player_args.append('run org.videolan.VLC')
+                case 'mpv':
+                    player_args.append('run io.mpv.Mpv')
+                case 'celluloid':
+                    player_args.append('run io.github.celluloid_player.Celluloid')
+                    player_args.append('--no-existing-session')
+                    cmd_tail.append('--player-continuous-http')
+                case 'gnome video (showtime)':
+                    player_args.append('run org.gnome.Showtime')
+                    player_args.append('--new-window')
+                    cmd_tail.append('--player-passthrough=hls,http')
+                case 'clapper':
+                    player_args.append('run com.github.rafostar.Clapper')
+                case 'smplayer':
+                    player_args.append('run info.smplayer.SMPlayer')
         else:
-            cmd.append('--title "{author} is Playing \'{game}\' | {title} | %s"'%url)
-
-        if skip_ads == "yes":
-            cmd.append("--twitch-disable-ads")
-
-        cmd.append("--twitch-disable-reruns")
+            if "celluloid" in player:
+                player = '%s --no-existing-session'%player
+                player_args.append("-n")
+            else:
+                cmd.append('--title "{author} is Playing \'{game}\' | {title} | %s"'%url)
 
         if not auth_token == '':
             cmd.append("--twitch-api-header=Authorization=OAuth=%s"%auth_token)
 
         cmd.append("--player=%s"%player)
 
-        if player_unique_args:
-            for arg in player_unique_args:
-                cmd.append(arg)
+        if player_args:
+            for arg in player_args:
+                arg_string = '--player-args="'+' '.join(player_args)+'"'
+
+        if cmd_tail:
+            for arg in cmd_tail:
+                tail_string = ' '.join(cmd_tail)
+
 
         cmd.append("%s %s"%(url,quality))
 
         # Popen doesn't like cmd list eleemnts with spaces, so we break it down intos a string and
         # add shell=True to the call to let it use that instead of the list
         cmdStr = ' '.join(cmd)
+        cmdStr += ' %s '%arg_string
+        cmdStr += ' '.join(cmd_tail)
+
+        print( cmdStr )
 
         buff = []
         proc = subprocess.Popen(cmdStr, stdout=subprocess.PIPE, encoding='utf-8', shell=True)
@@ -147,21 +175,14 @@ class ItemEnterEventListener(EventListener):
                 break
 
             if "opening stream:" in line:
-                if skip_ads == 'yes':
-                    notification_title = "Grab Some Popcorn!"
-                    notification_message = "%s's Stream is loading. Hang tight while we wait for the preroll ads to finish."%stream
-                else:
-                    notification_title = 'Grab Some Popcorn!'
-                    notification_message = "%s's Stream is loading."%stream
+                notification_title = "Grab Some Popcorn!"
+                notification_message = "%s's Stream is loading. Hang tight while we wait for the preroll ads to finish."%stream
                 break
-                proc.kill()
 
             if len(buff) > 10:
                 notification_title = 'Yikes!'
                 notification_message = "Infinite loop proection kicked in."
                 break
-                proc.kill()
-
 
         if not no_notify == 'yes':
             if not special:

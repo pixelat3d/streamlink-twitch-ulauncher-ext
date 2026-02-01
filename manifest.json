@@ -19,8 +19,16 @@
       "type": "select",
       "name": "Player",
       "description": "Video Player to use. | Default: mpv",
-      "options": ["mpv","vlc","mplayer","mpc-hc","potplayer","celluloid"],
+      "options": ["mpv","VLC","Gnome Video (Showtime)","mplayer","Celluloid","Clapper","SMPlayer"],
       "default_value": "mpv"
+    },
+    {
+      "id": "player_is_flatpak",
+      "type": "select",
+      "name": "Flatpak",
+      "description": "Is this player installed as a flatpak? | Default: No",
+      "options": ["Yes", "No"],
+      "default_value": "No"
     },
     {
       "id": "stream_quality",
@@ -42,14 +50,6 @@
       "type": "select",
       "name": "Disable Notifications",
       "description": "Turn off feedback notifications when launching streams | Default: No",
-      "options": ["Yes", "No"],
-      "default_value": "No"
-    },
-    {
-      "id": "disable_ads",
-      "type": "select",
-      "name": "Skip preroll ads",
-      "description": "Attempt to skip preroll ads. This really just means you won't see video for about 30 seconds. | Default: No",
       "options": ["Yes", "No"],
       "default_value": "No"
     },
