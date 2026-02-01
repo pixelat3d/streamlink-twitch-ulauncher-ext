@@ -1,10 +1,8 @@
-import os 
+import os
 import subprocess
-import gi
-import time
 import asyncio
-gi.require_version('Notify', '0.7')
-from gi.repository import Notify
+import threading
+import shutil
 
 from ulauncher.api.client.Extension import Extension
 from ulauncher.api.client.EventListener import EventListener
@@ -13,211 +11,234 @@ from ulauncher.api.shared.item.ExtensionResultItem import ExtensionResultItem
 from ulauncher.api.shared.action.RenderResultListAction import RenderResultListAction
 from ulauncher.api.shared.action.ExtensionCustomAction import ExtensionCustomAction
 
+def notify_show(title, message):
+	notify_send = shutil.which("notify-send")
+	if not notify_send:
+		return
+
+	icon_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "images", "icon.png")
+	cmd = [notify_send, "-a", "Streamlink Twitch", "-i", icon_path, "-t", "5000", title, message]
+
+	try:
+		subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+	except Exception:
+		pass
+
+
 class StreamlinkTwitchExtension(Extension):
-    # Required
-    def __init__(self):
-        super(StreamlinkTwitchExtension, self).__init__()
-        self.subscribe(KeywordQueryEvent, KeywordQueryEventListener())
-        self.subscribe(ItemEnterEvent, ItemEnterEventListener())
+	def __init__(self):
+		super(StreamlinkTwitchExtension, self).__init__()
+		self.subscribe(KeywordQueryEvent, KeywordQueryEventListener())
+		self.subscribe(ItemEnterEvent, ItemEnterEventListener())
+
 
 class KeywordQueryEventListener(EventListener):
-    # Event handler for input query changes
-    def on_event(self, event, extension):
-        items = []
-        autocomplete = []
-        autocomplete = extension.preferences.get("autocomplete").lower()
-        autocomplete = autocomplete.split(',')
-        stream = event.get_argument()
+	def on_event(self, event, extension):
+		items = []
+		autocomplete = extension.preferences.get("autocomplete").lower().split(',')
+		stream = (event.get_argument() or "").lower()
 
-        if stream:
-            stream = stream.lower()
-        else:
-            stream = ""
+		if len(stream) > 2:
+			for streamer in autocomplete:
+				if stream in streamer:
+					items.append(ExtensionResultItem(
+						icon='images/icon.png',
+						name="Watch %s" % streamer,
+						description="Watch %s on Twitch" % streamer.strip(" "),
+						on_enter=ExtensionCustomAction(streamer.strip(" "))
+					))
 
-        if len(stream) > 2:
-            for streamer in autocomplete:
-                if stream in streamer:
-                    items.append(ExtensionResultItem(
-                                icon='images/icon.png',
-                                name="Watch %s"%streamer,
-                                description="Watch %s on Twitch"%streamer.strip(" "),
-                                on_enter=ExtensionCustomAction(streamer.strip(" "))
-                            )
-                    )
+		if stream == "--":
+			items.append(ExtensionResultItem(
+				icon='images/icon.png',
+				name="Watch Everything",
+				description="Loads all favorites at once",
+				on_enter=ExtensionCustomAction(stream)
+			))
 
-        if stream == "--":
-            items.append(ExtensionResultItem(
-                        icon='images/icon.png',
-                        name="Watch Everything",
-                        description="Loads all favorites at once",
-                        on_enter=ExtensionCustomAction(stream)
-                    )
-            )
+		items.append(ExtensionResultItem(
+			icon='images/icon.png',
+			name="Watch %s" % stream,
+			description="Watch %s on Twitch" % stream,
+			on_enter=ExtensionCustomAction(stream)
+		))
 
+		return RenderResultListAction(items)
 
-        items.append(ExtensionResultItem(
-                    icon='images/icon.png',
-                    name="Watch %s"%stream,
-                    description="Watch %s on Twitch"%stream,
-                    on_enter=ExtensionCustomAction(stream)
-                )
-        )
-
-        return RenderResultListAction(items)
 
 class ItemEnterEventListener(EventListener):
-    # Load stream accoridng to preferences
-    def load_stream(self, stream, extension, special):
-        Notify.init("Streamlink Twitch")
-        streamlink_path = extension.preferences.get("streamlink_path")
-        quality = extension.preferences.get("stream_quality").lower()
-        player = extension.preferences.get("video_player").lower()
-        taskset = extension.preferences.get("restrict_cores").lower()
-        is_flatpak = extension.preferences.get("player_is_flatpak").lower()
-        auth_token = extension.preferences.get("auth_token")
-        no_notify = extension.preferences.get("disable_notifications").lower()
-        icon_path = os.path.dirname(os.path.realpath(__file__))+"/images/icon.png"
-        notification_title = "Whoops!"
-        notification_message = "Something probably went wrong"
-        cmd = []
-        cmdStr = ''
-        cmd_tail = []
-        tail_string = ''
-        player_args = []
-        arg_string = ''
+	async def probe_stream(self, stream, extension):
+		streamlink_path = extension.preferences.get("streamlink_path") or "streamlink"
+		auth_token = extension.preferences.get("auth_token") or ""
+		url = stream if "://" in stream else "https://twitch.tv/%s" % stream
 
-        # If left blank, let's hope it's somewhere in their $PATH
-        if not streamlink_path:
-            streamlink_path = 'streamlink'
+		result = {
+			"status": None,
+			"message": None,
+			"url": url,
+			"stream_url": None
+		}
 
-        # Clean up the UI and substitute here
-        if quality == "audio only":
-            quality = "audio_only"
+		cmd = [streamlink_path]
+		if auth_token:
+			cmd.append("--twitch-api-header=Authorization=OAuth=%s" % auth_token)
 
-        # If they didn't type a full URL (which why would you?)...
-        if "://" not in stream:
-            url = "https://twitch.tv/%s"%stream
-        else:
-            url = stream
+		cmd_str = " ".join(cmd + ["--stream-url", "%s best" % url])
 
-        if taskset == "yes":
-            cmd.append("taskset -c 0")
-            cmd.append(streamlink_path)
-        else:
-            cmd.append(streamlink_path)
+		try:
+			proc = await asyncio.create_subprocess_shell(cmd_str, stdout=asyncio.subprocess.PIPE)
 
-        if is_flatpak == 'yes':
-            selected_player = player
-            player = 'flatpak'
+			try:
+				stdout_bytes = await asyncio.wait_for(proc.communicate(), timeout=4)
+			except asyncio.TimeoutError:
+				proc.kill()
+				await proc.wait()
+				result["status"] = "timeout"
+				result["message"] = "%s: probe timed out" % stream
+				return result
 
-            match selected_player:
-                case 'vlc':
-                    player_args.append('run org.videolan.VLC')
-                case 'mpv':
-                    player_args.append('run io.mpv.Mpv')
-                case 'celluloid':
-                    player_args.append('run io.github.celluloid_player.Celluloid')
-                    player_args.append('--no-existing-session')
-                    cmd_tail.append('--player-continuous-http')
-                case 'gnome video (showtime)':
-                    player_args.append('run org.gnome.Showtime')
-                    player_args.append('--new-window')
-                    cmd_tail.append('--player-passthrough=hls,http')
-                case 'clapper':
-                    player_args.append('run com.github.rafostar.Clapper')
-                case 'smplayer':
-                    player_args.append('run info.smplayer.SMPlayer')
-        else:
-            if "celluloid" in player:
-                player = '%s --no-existing-session'%player
-                player_args.append("-n")
-            else:
-                cmd.append('--title "{author} is Playing \'{game}\' | {title} | %s"'%url)
+			stdout = (stdout_bytes[0] or b"").decode("utf-8", errors="replace").strip()
+			stdout_lower = stdout.lower()
 
-        if not auth_token == '':
-            cmd.append("--twitch-api-header=Authorization=OAuth=%s"%auth_token)
+			if "no playable streams found" in stdout_lower:
+				result["status"] = "offline"
+				result["message"] = "%s is currently Offline" % stream
+				return result
 
-        cmd.append("--player=%s"%player)
+			if "unable to validate key" in stdout_lower:
+				result["status"] = "notfound"
+				result["message"] = "%s does not exist" % stream
+				return result
 
-        if player_args:
-            for arg in player_args:
-                arg_string = '--player-args="'+' '.join(player_args)+'"'
+			if proc.returncode == 0 and stdout.startswith("http"):
+				result["status"] = "online"
+				result["message"] = "%s is online" % stream
+				result["stream_url"] = stdout
+				return result
 
-        if cmd_tail:
-            for arg in cmd_tail:
-                tail_string = ' '.join(cmd_tail)
+			result["status"] = "error"
+			result["message"] = "Probe error for %s" % stream if stdout else "Unknown error while probing %s" % stream
+			return result
+
+		except Exception as e:
+			result["status"] = "error"
+			result["message"] = "Probe exception: %s" % str(e)
+			return result
+
+	async def load_stream(self, stream, extension, special):
+		streamlink_path = extension.preferences.get("streamlink_path") or "streamlink"
+		quality = extension.preferences.get("stream_quality").lower()
+		player = extension.preferences.get("video_player").lower()
+		taskset = extension.preferences.get("restrict_cores").lower()
+		is_flatpak = extension.preferences.get("player_is_flatpak").lower()
+		auth_token = extension.preferences.get("auth_token") or ""
+		no_notify = extension.preferences.get("disable_notifications").lower()
+
+		url = stream if "://" in stream else "https://twitch.tv/%s" % stream
+		if quality == "audio only":
+			quality = "audio_only"
+
+		probe = await self.probe_stream(stream, extension)
+		if probe["status"] in ("offline", "notfound", "timeout", "error"):
+			if no_notify != "yes" and not special:
+				notify_show("Whoops!", probe["message"])
+			return
+
+		if no_notify != "yes":
+			notify_show("Grab Some Popcorn!", "%s's Stream is loading. Hang tight while we wait for the preroll ads to finish." % stream)
+
+		cmd = []
+		cmd_tail = []
+		player_args = []
+		arg_string = ""
+
+		if taskset == "yes":
+			cmd += ["taskset -c 0", streamlink_path]
+		else:
+			cmd.append(streamlink_path)
+
+		if is_flatpak == "yes":
+			selected_player = player
+			player = "flatpak"
+
+			match selected_player:
+				case "vlc":
+					player_args.append("run org.videolan.VLC")
+				case "mpv":
+					player_args.append("run io.mpv.Mpv")
+				case "celluloid":
+					player_args += ["run io.github.celluloid_player.Celluloid", "--no-existing-session"]
+					cmd_tail.append("--player-continuous-http")
+				case "gnome video (showtime)":
+					player_args += ["run org.gnome.Showtime", "--new-window"]
+					cmd_tail.append("--player-passthrough=hls,http")
+				case "clapper":
+					player_args.append("run com.github.rafostar.Clapper")
+				case "smplayer":
+					player_args.append("run info.smplayer.SMPlayer")
+		else:
+			if "celluloid" in player:
+				player = "%s --no-existing-session" % player
+				player_args.append("-n")
+			else:
+				cmd.append('--title "{author} is Playing \'{game}\' | {title} | %s"' % url)
+
+		if auth_token:
+			cmd.append("--twitch-api-header=Authorization=OAuth=%s" % auth_token)
+
+		cmd.append("--player=%s" % player)
+
+		if player_args:
+			arg_string = '--player-args="' + " ".join(player_args) + '"'
+
+		cmd.append("%s %s" % (url, quality))
+
+		cmd_str = " ".join(cmd)
+		if arg_string:
+			cmd_str += " %s " % arg_string
+		if cmd_tail:
+			cmd_str += " " + " ".join(cmd_tail)
+
+		print(cmd_str)
+
+		try:
+			await asyncio.create_subprocess_shell(cmd_str, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
+		except Exception as e:
+			print("Launch failed:", e)
+			if no_notify != "yes" and not special:
+				notify_show("Whoops!", "Launch failed for %s" % stream)
 
 
-        cmd.append("%s %s"%(url,quality))
 
-        # Popen doesn't like cmd list eleemnts with spaces, so we break it down intos a string and
-        # add shell=True to the call to let it use that instead of the list
-        cmdStr = ' '.join(cmd)
-        cmdStr += ' %s '%arg_string
-        cmdStr += ' '.join(cmd_tail)
-
-        print( cmdStr )
-
-        buff = []
-        proc = subprocess.Popen(cmdStr, stdout=subprocess.PIPE, encoding='utf-8', shell=True)
-
-        for line in iter(proc.stdout.readline,''):
-            line = line.lower()
-            buff.append(line)
-
-            # Stream Offline
-            if "no playable streams found on this url" in line:
-                notification_title = "Whoops!"
-                notification_message = "%s is currently Offline"%stream
-                break
-
-            # Stream does not exist or API error
-            if "unable to validate key" in line:
-                notification_title = "Whoops!"
-                notification_message = "%s does not exist"%stream
-                break
-
-            if "opening stream:" in line:
-                notification_title = "Grab Some Popcorn!"
-                notification_message = "%s's Stream is loading. Hang tight while we wait for the preroll ads to finish."%stream
-                break
-
-            if len(buff) > 10:
-                notification_title = 'Yikes!'
-                notification_message = "Infinite loop proection kicked in."
-                break
-
-        if not no_notify == 'yes':
-            if not special:
-                Notify.Notification.new(notification_title, notification_message, icon_path).show()
-            else:
-                if "is loading" in notification_message:
-                    Notify.Notification.new(notification_title, notification_message, icon_path).show()
-
-        Notify.uninit()
+	def on_event(self, event, extension):
+		threading.Thread(target=self._run_async, args=(event.get_data() or "", extension), daemon=True).start()
+		return RenderResultListAction([])
 
 
-    # When we slap enter on an item
-    def on_event(self, event, extension):
-        stream = event.get_data() or ""
+	def _run_async(self, stream, extension):
+		try:
+			asyncio.run(self._handle_enter(stream, extension))
+		except Exception as e:
+			print("Async handler error:", e)
 
-        if stream == '--':
-            autocomplete = extension.preferences.get("autocomplete").lower()
-            autocomplete = autocomplete.split(',')
 
-            Notify.init("Streamlink Twitch")
-            icon_path = os.path.dirname(os.path.realpath(__file__))+"/images/icon.png"
-            notification_title = "Grab some Popcorn!"
-            notification_message =  "Loading all of your favorites. Streams will pop up if they are online. This may take a while..."
-            Notify.Notification.new(notification_title, notification_message, icon_path).show()
-            Notify.uninit()
-            for fav in autocomplete:
-                self.load_stream(fav, extension, True)
-                time.sleep(1)
-        else:
-            self.load_stream(stream, extension, False)
+	async def _handle_enter(self, stream, extension):
+		if stream == "--":
+			autocomplete = [s.strip(" ") for s in extension.preferences.get("autocomplete").lower().split(",") if s.strip(" ")]
 
-        return RenderResultListAction([])
+			notify_show("Grab some Popcorn!", "Loading all of your favorites. Streams will pop up if they are online. This may take a while...")
+
+			sem = asyncio.Semaphore(5)
+
+			async def _load_one(fav):
+				async with sem:
+					await self.load_stream(fav, extension, True)
+
+			await asyncio.gather(*(_load_one(fav) for fav in autocomplete))
+			return
+
+		await self.load_stream(stream, extension, False)
+
 
 if __name__ == '__main__':
-    StreamlinkTwitchExtension().run()
+	StreamlinkTwitchExtension().run()
