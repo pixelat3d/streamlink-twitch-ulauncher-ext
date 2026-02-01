@@ -89,7 +89,7 @@ class ItemEnterEventListener(EventListener):
 			proc = await asyncio.create_subprocess_shell(cmd_str, stdout=asyncio.subprocess.PIPE)
 
 			try:
-				stdout_bytes = await asyncio.wait_for(proc.communicate(), timeout=4)
+				stdout_bytes = await asyncio.wait_for(proc.communicate(), timeout=15)
 			except asyncio.TimeoutError:
 				proc.kill()
 				await proc.wait()
@@ -127,12 +127,12 @@ class ItemEnterEventListener(EventListener):
 
 	async def load_stream(self, stream, extension, special):
 		streamlink_path = extension.preferences.get("streamlink_path") or "streamlink"
-		quality = extension.preferences.get("stream_quality").lower()
-		player = extension.preferences.get("video_player").lower()
-		taskset = extension.preferences.get("restrict_cores").lower()
-		is_flatpak = extension.preferences.get("player_is_flatpak").lower()
+		quality = (extension.preferences.get("stream_quality") or "").lower()
+		player = (extension.preferences.get("video_player") or "").lower()
+		taskset = (extension.preferences.get("restrict_cores") or "").lower()
+		is_flatpak = (extension.preferences.get("player_is_flatpak") or "").lower()
 		auth_token = extension.preferences.get("auth_token") or ""
-		no_notify = extension.preferences.get("disable_notifications").lower()
+		no_notify = (extension.preferences.get("disable_notifications") or "").lower()
 
 		url = stream if "://" in stream else "https://twitch.tv/%s" % stream
 		if quality == "audio only":
@@ -208,12 +208,9 @@ class ItemEnterEventListener(EventListener):
 			if no_notify != "yes" and not special:
 				notify_show("Whoops!", "Launch failed for %s" % stream)
 
-
-
 	def on_event(self, event, extension):
 		threading.Thread(target=self._run_async, args=(event.get_data() or "", extension), daemon=True).start()
 		return RenderResultListAction([])
-
 
 	def _run_async(self, stream, extension):
 		try:
@@ -221,10 +218,10 @@ class ItemEnterEventListener(EventListener):
 		except Exception as e:
 			print("Async handler error:", e)
 
-
 	async def _handle_enter(self, stream, extension):
 		if stream == "--":
-			autocomplete = [s.strip(" ") for s in extension.preferences.get("autocomplete").lower().split(",") if s.strip(" ")]
+			autocomplete_pref = extension.preferences.get("autocomplete") or ""
+			autocomplete = [s.strip(" ") for s in autocomplete_pref.lower().split(",") if s.strip(" ")]
 
 			notify_show("Grab some Popcorn!", "Loading all of your favorites. Streams will pop up if they are online. This may take a while...")
 
@@ -232,9 +229,13 @@ class ItemEnterEventListener(EventListener):
 
 			async def _load_one(fav):
 				async with sem:
-					await self.load_stream(fav, extension, True)
+					try:
+						await self.load_stream(fav, extension, True)
+					except Exception as e:
+						print("load_stream failed for %s:" % fav, e)
+					await asyncio.sleep(0.2)
 
-			await asyncio.gather(*(_load_one(fav) for fav in autocomplete))
+			await asyncio.gather(*(_load_one(fav) for fav in autocomplete), return_exceptions=True)
 			return
 
 		await self.load_stream(stream, extension, False)
@@ -242,3 +243,4 @@ class ItemEnterEventListener(EventListener):
 
 if __name__ == '__main__':
 	StreamlinkTwitchExtension().run()
+
