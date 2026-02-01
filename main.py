@@ -80,8 +80,11 @@ class ItemEnterEventListener(EventListener):
         notification_title = "Whoops!"
         notification_message = "Something probably went wrong"
         cmd = []
+        cmdStr = ''
         cmd_tail = []
+        tail_string = ''
         player_args = []
+        arg_string = ''
 
         # If left blank, let's hope it's somewhere in their $PATH
         if not streamlink_path:
