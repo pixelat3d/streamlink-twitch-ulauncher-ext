@@ -17,7 +17,7 @@ def notify_show(title, message):
 		return
 
 	icon_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "images", "icon.png")
-	cmd = [notify_send, "-a", "Streamlink Twitch", "-i", icon_path, "-t", "5000", title, message]
+	cmd = [notify_send, "-a", "Streamlink Twitch", "-i", icon_path, "-t", "2000", title, message]
 
 	try:
 		subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
