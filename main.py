@@ -184,9 +184,10 @@ class ItemEnterEventListener(EventListener):
 				cmd.append('--title "{author} is Playing \'{game}\' | {title} | %s"' % url)
 
 		if auth_token:
-			cmd.append("--twitch-api-header=Authorization=OAuth=%s" % auth_token)
+			cmd.append('"--twitch-api-header=Authorization=OAuth %s"' % auth_token)
 
 		cmd.append("--player=%s" % player)
+		cmd.append("--twitch-supported-codecs=h264,h265,av1")
 
 		if player_args:
 			arg_string = '--player-args="' + " ".join(player_args) + '"'
