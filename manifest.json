@@ -19,7 +19,7 @@
       "type": "select",
       "name": "Player",
       "description": "Video Player to use. | Default: mpv",
-      "options": ["mpv","VLC","Gnome Video (Showtime)","mplayer","Celluloid","Clapper","SMPlayer"],
+      "options": ["mpv","VLC","Gnome Video (Showtime)","mplayer","Celluloid","Clapper","Cine","SMPlayer"],
       "default_value": "mpv"
     },
     {

@@ -3,6 +3,7 @@ import subprocess
 import asyncio
 import threading
 import shutil
+import tempfile
 
 from ulauncher.api.client.Extension import Extension
 from ulauncher.api.client.EventListener import EventListener
@@ -160,6 +161,7 @@ class ItemEnterEventListener(EventListener):
 		if is_flatpak == "yes":
 			selected_player = player
 			player = "flatpak"
+			tmpdir = tempfile.gettempdir()
 
 			match selected_player:
 				case "vlc":
@@ -170,10 +172,13 @@ class ItemEnterEventListener(EventListener):
 					player_args += ["run io.github.celluloid_player.Celluloid", "--no-existing-session"]
 					cmd_tail.append("--player-continuous-http")
 				case "gnome video (showtime)":
-					player_args += ["run org.gnome.Showtime", "--new-window"]
-					cmd_tail.append("--player-passthrough=hls,http")
+					cmd.append('--player-passthrough hls,http')
+					player_args.append("run org.gnome.Showtime --new-window")
 				case "clapper":
 					player_args.append("run com.github.rafostar.Clapper")
+				case "cine":
+					cmd.append('--player-fifo')
+					player_args.append(f"run --filesystem={tmpdir} --file-forwarding io.github.diegopvlk.Cine @@ {{playerinput}} @@ --new-window")
 				case "smplayer":
 					player_args.append("run info.smplayer.SMPlayer")
 		else:
