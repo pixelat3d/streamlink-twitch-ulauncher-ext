@@ -39,6 +39,14 @@
       "default_value": "Best"
     },
     {
+      "id": "low_latency",
+      "type": "select",
+      "name": "Low Latency",
+      "description": "Use Low Latency | Default: No",
+      "options": ["Yes", "No"],
+      "default_value": "No"
+    },
+    {
       "id": "autocomplete",
       "type": "text",
       "name": "Favorite Streamers",

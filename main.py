@@ -134,6 +134,7 @@ class ItemEnterEventListener(EventListener):
 		is_flatpak = (extension.preferences.get("player_is_flatpak") or "").lower()
 		auth_token = extension.preferences.get("auth_token") or ""
 		no_notify = (extension.preferences.get("disable_notifications") or "").lower()
+		low_latency = (extension.preferences.get("low_latency") or "no").lower()
 
 		url = stream if "://" in stream else "https://twitch.tv/%s" % stream
 		if quality == "audio only":
@@ -157,6 +158,9 @@ class ItemEnterEventListener(EventListener):
 			cmd += ["taskset -c 0", streamlink_path]
 		else:
 			cmd.append(streamlink_path)
+
+		if low_latency == "yes":
+			cmd.append("--twitch-low-latency")
 
 		if is_flatpak == "yes":
 			selected_player = player
